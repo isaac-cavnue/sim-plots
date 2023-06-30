@@ -24,8 +24,6 @@ def parseData(jsonPayload):
 
     attrs = []
 
-    # Collect a list of heading names from the flattened data where the amount of values for the heading is the same as the timestamps
-    # Excluding the timestamp heading as it's the constant X axis
     headings = []
     for key in flatData:
         if isinstance(flatData[key], list): 
@@ -52,14 +50,18 @@ def parseData(jsonPayload):
             sub = dict.get(supe, subKey)
             subGroups[subKey] = sub
         
-        fig = go.Figure(layout={'title': superHeading})
+        # fig = go.Figure(layout={'title': superHeading})
+        colors = ['red', 'blue', 'blue', 'blue']
+        scatter = px.scatter(title=superHeading)
         for group in subGroups:
             subGroup = dict.get(subGroups, group)
             if not None in subGroup:
-                fig.add_trace(go.Scatter(x=timestampDiffsFromStart, y=subGroup, mode='lines', name=group))
+                scatter.add_scatter(x=timestampDiffsFromStart, y=subGroup, name=group)
+                # fig.add_trace(go.Scatter(x=timestampDiffsFromStart, y=subGroup, mode='lines', name=group))
 
         plots.append(html.Div([
-                    dcc.Graph(figure=fig, id={'type': 'plot', 'index': heading})
+                    # dcc.Graph(figure=fig, id={'type': 'plot', 'index': heading})
+                    dcc.Graph(figure=scatter, id={'type': 'plot', 'index': heading})
                 ]))
     return [getAttributes(flatData, attrs), plots]
 
