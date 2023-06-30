@@ -16,26 +16,6 @@ def parseData(jsonPayload):
     # Pulling out the timestamp count for ease
     timestampCount = len(timestampDiffsFromStart)
     
-    # def buildDataFrames():
-    #     sourceDicts = {}
-    #     for key in jsonPayload:
-    #         if isinstance(dict.get(jsonPayload, key), dict):
-    #             pd.DataFrame()
-    #             sourceDicts[key] = {}
-    #             superDict = dict.get(jsonPayload, key)
-    #             for subKey in superDict:
-    #                 if isinstance(dict.get(superDict,subKey), list):
-    #                     subDict = dict.get(superDict, subKey)
-    #                     if key in sourceDicts:
-    #                         super = dict(sourceDicts.get(key))
-    #                         super[subKey] = subDict
-    #                     else:
-    #                         sourceDicts[key][subKey] = subDict
-                            
-    #     print(sourceDicts)
-        
-    # buildDataFrames()
-    
     # Flattening the general data from the json
     def flatten_dict(d: MutableMapping, sep: str= '/') -> MutableMapping:
         [flat_dict] = pd.json_normalize(d, sep=sep).to_dict(orient='records')
@@ -66,41 +46,51 @@ def parseData(jsonPayload):
     
     plots = []
     
-    print(px.data.gapminder().query("year == 2007"))
+    # print(px.data.gapminder().query("continent == 'Oceania'").to_dict())
     
+    startIndex = 0
     for superHeading in superHeadingGroup:
-        data = {'time': timestampDiffsFromStart}
-        
+        data = {'time': {}, 'actor': {}, 'val':{}}
+        tempCollection = {}
+                        
         supe = dict.get(superHeadingGroup, superHeading)
         for subKey in supe:
             sub = dict.get(supe, subKey)
             if len(sub) == timestampCount:
-                data[subKey] = sub
-
-        if len(data) > 1:
+                tempCollection[subKey] = sub
+        
+        for group in tempCollection:
+            subStart = startIndex
+            dictTimes = dict.get(data, 'time')
+            dictActors = dict.get(data, 'actor')
+            dictVals = dict.get(data, 'val')
+            subGroup = dict.get(tempCollection, group)
+            for val in subGroup:
+                dictActors[subStart] = group
+                dictVals[subStart] = val
+                subStart = subStart + 1
+            
+            subStart = startIndex
+            for time in timestampDiffsFromStart:
+                dictTimes[subStart] = time
+                subStart = subStart + 1
+            startIndex = startIndex + len(dictTimes)
+        
             df = pd.DataFrame(data)
-            fig = px.scatter(title=str(superHeading))
-            
-            for key in data:
-                if str(key) != 'time':
-                    # if 'HV' in key:
-                        
-                    fig.add_scatter(name=str(key),x=df['time'], y=df[key], fillcolor='rgb(120, 50, 200)')
-            
+            fig = px.line(df, x=df['time'], y=df['val'], color='actor', title=str(superHeading))
+            fig.update_xaxes(visible=True, fixedrange=True)
+            fig.update_yaxes(visible=True, fixedrange=True)
+            # fig.update_layout(annotations=[], overwrite=True)
+
             plots.append(html.Div([
                         dcc.Graph(figure=fig, id={'type': 'plot', 'index': heading})
                     ]))
-        else:
-            print("empty group")
-    
-    # plots = []
-    # if(len(headings) > 1):
-    #     for heading in headings:
-    #         plot_index = len(plots) + 1
-    #         if(len(headings) > plot_index):
-                # plots.append(html.Div([
-                #     dcc.Graph(figure=getDataForPlot(flatData, timestampDiffsFromStart, heading), id={'type': 'plot', 'index': plot_index})
-                # ]))
+        dictTimes = {}
+        dictActors = {}
+        dictVals = {}
+        subGroup = {}
+        data = {}
+        tempCollection = {}
     return [getAttributes(flatData, attrs), plots]
 
 # Initialize the app and generate the plots for all valid data segments (where the entry count is the same as the timestamp count)
@@ -193,6 +183,3 @@ def getDataForPlot(flatData, timestampDiffsFromStart, plot_index):
 
 app = initApp()
 app.run_server(debug=True)
-
-#  TODO Make all plotable data DataFrames
-#  TODO Plot all DataFrames using px.whatever
