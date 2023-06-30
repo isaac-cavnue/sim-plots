@@ -1,7 +1,6 @@
 import base64
 import json
 from typing import MutableMapping
-import numpy as np
 import pandas as pd
 import dash
 from dash import dcc
@@ -30,7 +29,7 @@ def parseData(jsonPayload):
     headings = []
     for key in flatData:
         if isinstance(flatData[key], list): 
-            if len(flatData[key]) == timestampCount and key != 'timestamp':
+            if key != 'timestamp':
                 headings.append(key)
         else:
             attrs.append(key)
@@ -43,54 +42,25 @@ def parseData(jsonPayload):
         if superHeading not in dict.keys(superHeadingGroup):
             superHeadingGroup[superHeading] = {}
         superHeadingGroup[superHeading][subHeading] = dict.get(flatData, heading)
-    
+        superHeadingGroup[superHeading] = {key:superHeadingGroup[superHeading][key] for key in sorted(superHeadingGroup[superHeading].keys())}
     plots = []
     
-    # print(px.data.gapminder().query("continent == 'Oceania'").to_dict())
-    
-    startIndex = 0
     for superHeading in superHeadingGroup:
-        data = {'time': {}, 'actor': {}, 'val':{}}
-        tempCollection = {}
-                        
+        subGroups = {}
         supe = dict.get(superHeadingGroup, superHeading)
         for subKey in supe:
             sub = dict.get(supe, subKey)
-            if len(sub) == timestampCount:
-                tempCollection[subKey] = sub
+            subGroups[subKey] = sub
         
-        for group in tempCollection:
-            subStart = startIndex
-            dictTimes = dict.get(data, 'time')
-            dictActors = dict.get(data, 'actor')
-            dictVals = dict.get(data, 'val')
-            subGroup = dict.get(tempCollection, group)
-            for val in subGroup:
-                dictActors[subStart] = group
-                dictVals[subStart] = val
-                subStart = subStart + 1
-            
-            subStart = startIndex
-            for time in timestampDiffsFromStart:
-                dictTimes[subStart] = time
-                subStart = subStart + 1
-            startIndex = startIndex + len(dictTimes)
-        
-            df = pd.DataFrame(data)
-            fig = px.line(df, x=df['time'], y=df['val'], color='actor', title=str(superHeading))
-            fig.update_xaxes(visible=True, fixedrange=True)
-            fig.update_yaxes(visible=True, fixedrange=True)
-            # fig.update_layout(annotations=[], overwrite=True)
+        fig = go.Figure(layout={'title': superHeading})
+        for group in subGroups:
+            subGroup = dict.get(subGroups, group)
+            if not None in subGroup:
+                fig.add_trace(go.Scatter(x=timestampDiffsFromStart, y=subGroup, mode='lines', name=group))
 
-            plots.append(html.Div([
-                        dcc.Graph(figure=fig, id={'type': 'plot', 'index': heading})
-                    ]))
-        dictTimes = {}
-        dictActors = {}
-        dictVals = {}
-        subGroup = {}
-        data = {}
-        tempCollection = {}
+        plots.append(html.Div([
+                    dcc.Graph(figure=fig, id={'type': 'plot', 'index': heading})
+                ]))
     return [getAttributes(flatData, attrs), plots]
 
 # Initialize the app and generate the plots for all valid data segments (where the entry count is the same as the timestamp count)
@@ -139,7 +109,6 @@ def initApp():
 
     return app
 
-
 def getAttributes(flatData, attrs):
     keys = []
     values = []
@@ -156,30 +125,6 @@ def getAttributes(flatData, attrs):
         return html.Div(className="table", children=[dash_table.DataTable(df.to_dict('records'), [{"name": i, "id": i} for i in df.columns], style_cell={'textAlign': 'center'},)], style={'width': '50%'})
     else:
         return []
-
-def getDataForPlot(flatData, timestampDiffsFromStart, plot_index):
-    traces = []
-    x = timestampDiffsFromStart
-    y = dict.get(flatData, plot_index)
-
-    trace = go.Scatter(
-        x=x,
-        y=y,
-        mode='lines+markers',
-        name=plot_index
-    )
-    
-    traces.append(trace)
-
-    layout = go.Layout(
-        title={'text': f'{plot_index}'},
-        xaxis={'title': "Timestamp(diff)"},
-        yaxis={'title': 'Values'},
-        showlegend=False
-    )
-
-    figure = {'data': traces, 'layout': layout}
-    return figure
 
 app = initApp()
 app.run_server(debug=True)
