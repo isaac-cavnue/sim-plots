@@ -8,13 +8,34 @@ from dash import dcc
 from dash import html
 from dash import dash_table
 import plotly.graph_objects as go
+import plotly.express as px
 
 def parseData(jsonPayload):
     timestampDiffsFromStart = [element - jsonPayload['timestamp'][0] for element in jsonPayload['timestamp']]
 
     # Pulling out the timestamp count for ease
     timestampCount = len(timestampDiffsFromStart)
-
+    
+    # def buildDataFrames():
+    #     sourceDicts = {}
+    #     for key in jsonPayload:
+    #         if isinstance(dict.get(jsonPayload, key), dict):
+    #             pd.DataFrame()
+    #             sourceDicts[key] = {}
+    #             superDict = dict.get(jsonPayload, key)
+    #             for subKey in superDict:
+    #                 if isinstance(dict.get(superDict,subKey), list):
+    #                     subDict = dict.get(superDict, subKey)
+    #                     if key in sourceDicts:
+    #                         super = dict(sourceDicts.get(key))
+    #                         super[subKey] = subDict
+    #                     else:
+    #                         sourceDicts[key][subKey] = subDict
+                            
+    #     print(sourceDicts)
+        
+    # buildDataFrames()
+    
     # Flattening the general data from the json
     def flatten_dict(d: MutableMapping, sep: str= '/') -> MutableMapping:
         [flat_dict] = pd.json_normalize(d, sep=sep).to_dict(orient='records')
@@ -33,15 +54,53 @@ def parseData(jsonPayload):
                 headings.append(key)
         else:
             attrs.append(key)
-            
+    
+    superHeadingGroup = {}
+    for heading in headings:
+        superHeadingSplit = str(heading).split('/')
+        superHeading = superHeadingSplit[0]
+        subHeading = superHeadingSplit[1]
+        if superHeading not in dict.keys(superHeadingGroup):
+            superHeadingGroup[superHeading] = {}
+        superHeadingGroup[superHeading][subHeading] = dict.get(flatData, heading)
+    
     plots = []
-    if(len(headings) > 1):
-        for heading in headings:
-            plot_index = len(plots) + 1
-            if(len(headings) > plot_index):
-                plots.append(html.Div([
-                    dcc.Graph(figure=getDataForPlot(flatData, timestampDiffsFromStart, heading), id={'type': 'plot', 'index': plot_index})
-                ]))
+    
+    print(px.data.gapminder().query("year == 2007"))
+    
+    for superHeading in superHeadingGroup:
+        data = {'time': timestampDiffsFromStart}
+        
+        supe = dict.get(superHeadingGroup, superHeading)
+        for subKey in supe:
+            sub = dict.get(supe, subKey)
+            if len(sub) == timestampCount:
+                data[subKey] = sub
+
+        if len(data) > 1:
+            df = pd.DataFrame(data)
+            fig = px.scatter(title=str(superHeading))
+            
+            for key in data:
+                if str(key) != 'time':
+                    # if 'HV' in key:
+                        
+                    fig.add_scatter(name=str(key),x=df['time'], y=df[key], fillcolor='rgb(120, 50, 200)')
+            
+            plots.append(html.Div([
+                        dcc.Graph(figure=fig, id={'type': 'plot', 'index': heading})
+                    ]))
+        else:
+            print("empty group")
+    
+    # plots = []
+    # if(len(headings) > 1):
+    #     for heading in headings:
+    #         plot_index = len(plots) + 1
+    #         if(len(headings) > plot_index):
+                # plots.append(html.Div([
+                #     dcc.Graph(figure=getDataForPlot(flatData, timestampDiffsFromStart, heading), id={'type': 'plot', 'index': plot_index})
+                # ]))
     return [getAttributes(flatData, attrs), plots]
 
 # Initialize the app and generate the plots for all valid data segments (where the entry count is the same as the timestamp count)
@@ -119,6 +178,7 @@ def getDataForPlot(flatData, timestampDiffsFromStart, plot_index):
         mode='lines+markers',
         name=plot_index
     )
+    
     traces.append(trace)
 
     layout = go.Layout(
@@ -133,3 +193,6 @@ def getDataForPlot(flatData, timestampDiffsFromStart, plot_index):
 
 app = initApp()
 app.run_server(debug=True)
+
+#  TODO Make all plotable data DataFrames
+#  TODO Plot all DataFrames using px.whatever
