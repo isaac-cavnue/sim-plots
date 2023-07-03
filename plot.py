@@ -77,31 +77,42 @@ def parseData(jsonPayload):
 def initApp():
     app = dash.Dash(__name__)
     app.layout = html.Div([
-        html.H1("JSON Plotting Tool"),
         html.Div([
-            dcc.Upload(
-            id='upload-data',
-            children=html.Div([
-                'Drag and Drop or ',
-                html.A('Select Files')
-            ]),
-            style={
-                'width': '30%',
-                'height': '60px',
-                'lineHeight': '60px',
-                'borderWidth': '1px',
-                'borderStyle': 'dashed',
-                'borderRadius': '5px',
-                'textAlign': 'center',
-                'margin': '10px'
-            },
-            multiple=False
-        ),
-        html.Div(id='output-data-upload'),
-        ]),
+            html.H1("JSON Plotting Tool"), 
+            html.Div([
+                html.Div([
+                    dcc.Upload(
+                        id='upload-data',
+                        children=html.Div([
+                            html.A('Select File')
+                        ]),
+                        style={
+                            'display': 'flex', 
+                            'flex-direction': 'column', 
+                            'justify-content': 'center',
+                            'width': '150px',
+                            'height': '30px',
+                            'borderWidth': '1px',
+                            'borderStyle': 'solid',
+                            'borderRadius': '3px',
+                            'textAlign': 'center',
+                        },
+                        multiple=False
+                    ),
+                    html.Div(id='output-data-upload'),
+                    html.Button('Generate Report', id='report', style={
+                    'width': '150px',
+                    'height': '30px',
+                    'borderWidth': '1px',
+                    'borderRadius': '3px',
+                    'textAlign': 'center',
+                    'margin': '10px'
+                }),
+            ], style={'display': 'flex', 'flex-direction': 'row', 'justify-content': 'center', 'justify-items': 'center', 'align-content': 'center', 'align-items': 'center'}),
+        ]),], style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'justify-items': 'center', 'align-content': 'center', 'align-items': 'center'}),
         html.Div(id='attrs-container', children=[]),
-        html.Div(id='plot-container', children=[]),
-    ])
+        html.Div(id='plot-container', children=[], style={'display': 'flex', 'flex-flow': 'row wrap', 'justify-content': 'center', 'justify-items': 'center', 'align-content': 'center', 'align-items': 'center'}),
+    ], style={'display': 'flex', 'flex-direction': 'column', 'justify-content': 'center', 'justify-items': 'center', 'align-content': 'center', 'align-items': 'center'})
     
     # Whenever a new file is selected for plotting, return new data, or safe empty data
     @app.callback(dash.dependencies.Output('attrs-container', 'children'),
